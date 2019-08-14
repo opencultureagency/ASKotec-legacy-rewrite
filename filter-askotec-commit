@@ -8,7 +8,8 @@ set -o errexit
 SCRIPT_DIR=$(cd $(dirname "${0}"); pwd)
 #extensions=".*\.pdf\|.*\.MOV\|.*\.DS_Store\|.*\.buildconfig\|.*\.xml"
 extensions=".*\.MOV\|.*\.DS_Store\|.*\.buildconfig\|.*\.xml"
-flatten=false
+# Whether to convert LibreOffice binary files to text-based ones.
+flatten=true
 
 echo
 echo "###################################################"
@@ -70,8 +71,9 @@ then
 	# we are at v1.0
 	# bring back the source document form last commit
 	#hash_last=$(git rev-parse 'HEAD^1')
-	hash_last=eefcfb44a128b4ed25f4d34d30a1d1d2b3da42ee
-	git checkout $hash_last -- "ASKotec_Process-and-Content.ods"
+	#hash_last=eefcfb44a128b4ed25f4d34d30a1d1d2b3da42ee
+	#git checkout $hash_last -- "ASKotec_Process-and-Content.ods"
+	cp "$SCRIPT_DIR/ASKotec_Process-and-Content.ods" ./
 fi
 
 echo
@@ -108,12 +110,19 @@ then
 	do
 		flat_ext="f$(echo $odx_file | sed -e 's/.*\.//')"
 		fodx_file="$(echo $odx_file | sed -e 's/\.od/.fod/')"
+		echo -n "Converting '$odx_file' -> '$fodx_file' ..."
 		libreoffice --headless --convert-to $flat_ext "$odx_file"
 		rm "$odx_file"
 		# rewrite timestamp
 		date="2019-08-08"
 		time="06:00:00.000000000"
 		sed -i -e 's|\( text:date-value="\)[0-9.-]*\(">00.00.0000</text:date>, <text:time style:data-style-name="N2" text:time-value="\)[0-9:.]*">|\1'$date'\2'$time'">|' "$fodx_file"
+		# set the Rsid (random seed ID)
+		rsid=1307028
+		sed -i -e 's|\(<config:config-item config:name="Rsid" config:type="int">\)[0-9]*\(</config:config-item>\)|\1'$rsid'\2|' "$fodx_file"
+		# replace list IDs
+		sed -i -e 's|\(<text:list xml:id="list\)[0-9]*\(" text:style-name="L\)\([0-9]*\)\(">\)|\1\3\2\3\4|' "$fodx_file"
+		echo " done."
 	done < <(find . -type f -path '*.od?' ! -path './.git*' )
 fi
 
