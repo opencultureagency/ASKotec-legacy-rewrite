@@ -5,8 +5,9 @@
 # immediately exit in case of an error
 set -o errexit
 
+work_dir=$(pwd)
 dist_version=$(git describe --always --tags)
-dist_root="$(pwd)/dist"
+dist_root="${work_dir}/dist"
 dist_dir="${dist_root}/$dist_version"
 
 function git-tag-hash() {
@@ -68,15 +69,15 @@ echo
 echo "Linking the git repo and parts of the assets into the dist dir ..."
 ln -s .git "$dist_dir/"
 mkdir -p "$dist_dir/assets"
-ln -s "$(pwd)/assets/thumbs" "$dist_dir/assets/"
+ln -s "${work_dir}/assets/thumbs" "$dist_dir/assets/"
 hash_v1_0=$(git-tag-hash 'askotec-1.0')
 hash_cur=$(git rev-parse HEAD)
 steps_to_v1_0=$(git-commit-steps $hash_cur $hash_v1_0)
 if [ $steps_to_v1_0 -ge 0 ]
 then
 	# The current commit is an ancestor of or equal to v1.0
-	ln -s "$(pwd)/assets/ASKotec-packing-guide.pdf" "$dist_dir/"
-	ln -s "$(pwd)/assets/ASKotec_Poster_24_18.pdf" "$dist_dir/"
+	ln -s "${work_dir}/assets/ASKotec-packing-guide.pdf" "$dist_dir/"
+	ln -s "${work_dir}/assets/ASKotec_Poster_24_18.pdf" "$dist_dir/"
 fi
 
 echo
