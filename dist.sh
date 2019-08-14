@@ -83,8 +83,8 @@ echo
 echo "Generate PDFs from Markdown documents ..."
 while read -r md_file
 do
-	file_path=$(dirname "$fodx_file")
-	file_base=$(basename "$fodx_file" | sed -e 's/\.[^.]*//')
+	file_path=$(dirname "$md_file")
+	file_base=$(basename "$md_file" | sed -e 's/\.[^.]*//')
 	pdf_file="${file_base}.pdf"
 	pandoc -o "$pdf_file" "$md_file"
 	mkdir -p "$dist_dir/$file_path"
