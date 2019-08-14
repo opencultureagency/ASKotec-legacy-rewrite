@@ -89,7 +89,7 @@ do
 	pandoc -o "$pdf_file" "$md_file"
 	mkdir -p "$dist_dir/$file_path"
 	mv "$pdf_file" "$dist_dir/$file_path"
-done < <(find . -type f -path '*.md' ! -path './.git*')
+done < <(find . -type f -path '*.md' ! -path './.git*' ! -path './dist*')
 
 echo
 echo "Generate PDFs from LibreOffice documents (binary and flat) ..."
@@ -101,7 +101,7 @@ do
 	libreoffice --headless --convert-to pdf "$xodx_file"
 	mkdir -p "$dist_dir/$file_path"
 	mv "$pdf_file" "$dist_dir/$file_path"
-done < <(find . -type f -path '*.*od?' ! -path './.git*')
+done < <(find . -type f -path '*.*od?' ! -path './.git*' ! -path './dist*')
 
 echo
 echo "Copy source files to dist dir ..."
