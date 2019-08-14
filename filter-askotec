@@ -106,8 +106,8 @@ then
 	echo "Setting version tags ..."
 	commit_0_1=$(git log --oneline --grep='^Initial commit$' master | awk -e '{ print $1 }')
 	commit_1_0=$(git log --oneline --grep='^Tidied up the repository$' master | awk -e '{ print $1 }')
-	git tag -m '#ASKotec release version 0.1' -a 'askotec-0.1' $commit_0_1
-	git tag -m '#ASKotec release version 1.0' -a 'askotec-1.0' $commit_1_0
+	git tag -m '#ASKotek release version 0.1' -a 'ASKotek-0.1' $commit_0_1
+	git tag -m '#ASKotec release version 1.0' -a 'ASKotec-1.0' $commit_1_0
 
 if false
 then
@@ -157,9 +157,9 @@ then
 	echo
 	echo "creating distributions ..."
 	cd "$CMPCT_REPO"
-	git checkout 'askotec-0.1'
+	git checkout 'ASKotek-0.1'
 	./dist.sh
-	git checkout 'askotec-1.0'
+	git checkout 'ASKotec-1.0'
 	./dist.sh
 	git checkout 'master'
 	./dist.sh

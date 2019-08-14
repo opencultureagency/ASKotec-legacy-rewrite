@@ -70,7 +70,7 @@ echo "Linking the git repo and parts of the assets into the dist dir ..."
 ln -s .git "$dist_dir/"
 mkdir -p "$dist_dir/assets"
 ln -s "${work_dir}/assets/thumbs" "$dist_dir/assets/"
-hash_v1_0=$(git-tag-hash 'askotec-1.0')
+hash_v1_0=$(git-tag-hash 'ASKotec-1.0')
 hash_cur=$(git rev-parse HEAD)
 steps_to_v1_0=$(git-commit-steps $hash_cur $hash_v1_0)
 if [ $steps_to_v1_0 -ge 0 ]
