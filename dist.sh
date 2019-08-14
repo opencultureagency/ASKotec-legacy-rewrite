@@ -66,8 +66,16 @@ then
 fi
 
 echo
-echo "Linking the git repo and parts of the assets into the dist dir ..."
-ln -s .git "$dist_dir/"
+echo "Cloning the git repo (barely) into the dist dir ..."
+#ln -s "${work_dir}/.git" "$dist_dir/"
+git clone --bare . "$dist_dir/.git"
+cd "$dist_dir/.git"
+git remote rm origin
+git remote add origin "https://github.com/opencultureagency/ASKotec.git"
+cd "${work_dir}"
+
+echo
+echo "Linking the parts of the assets into the dist dir ..."
 mkdir -p "$dist_dir/assets"
 ln -s "${work_dir}/assets/thumbs" "$dist_dir/assets/"
 hash_v1_0=$(git-tag-hash 'ASKotec-1.0')
