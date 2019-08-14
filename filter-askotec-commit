@@ -1,0 +1,137 @@
+#!/bin/bash
+# Copyright: Public Domain (PD)
+# Filters a single commit of the original, bloated ASKotec repo.
+
+# immediately exit in case of an error
+set -o errexit
+
+SCRIPT_DIR=$(cd $(dirname "${0}"); pwd)
+#extensions=".*\.pdf\|.*\.MOV\|.*\.DS_Store\|.*\.buildconfig\|.*\.xml"
+extensions=".*\.MOV\|.*\.DS_Store\|.*\.buildconfig\|.*\.xml"
+flatten=false
+
+echo
+echo "###################################################"
+echo
+
+# Cleanup file names
+echo
+echo Cleanup file names...
+detox -r *
+
+echo
+echo -n "Delete all directories ..."
+find . -maxdepth 1 -type d ! -path '.' ! -path './.git*' -print0 | xargs -0 rm -Rf
+
+echo
+echo -n "Convert MS Word files (*.docx) to LibreOffice Writer (*.odt) ..."
+find . -type f -path '*.docx' ! -path './.git*' -print0 \
+	| xargs -0 libreoffice --headless --convert-to odt
+
+echo
+echo "Remove version info from file-names ..."
+while read -r v_file
+do
+	nv_file="$(echo $v_file | sed -e 's/_V\..\..//')"
+	mv "$v_file" "$nv_file"
+done < <(find . -type f -path '*_V.1.*' ! -path './.git*' )
+
+echo
+echo "Rewrite some file names ..."
+while read -r l_file
+do
+	nl_file="$(echo $l_file | sed -e 's/-list\././')"
+	mv "$l_file" "$nl_file"
+done < <(find . -type f -path '*-list.*' ! -path './.git*' )
+if [ -f "ASKotek_Text_LibreOffice_TW.odt" ]
+then
+	mv "ASKotek_Text_LibreOffice_TW.odt" "ASKotek_Text.odt"
+fi
+if [ -f "ASKotek_Text_LibreOffice_TW.pdf" ]
+then
+	mv "ASKotek_Text_LibreOffice_TW.pdf" "ASKotek_Text.pdf"
+fi
+if [ -f "ASKotec_poster_24_18.pdf" ]
+then
+	mv "ASKotec_poster_24_18.pdf" "ASKotec_Poster_24_18.pdf"
+fi
+# We can remove this, as we have it in the assets
+rm -f ASKote?_Poster_24_18.pdf
+if [ -f "ASKotec_description-2017.pdf" ]
+then
+	rm "ASKotec_description-2017.pdf"
+	cp "$SCRIPT_DIR/ASKotec_description-2017.md" ./
+fi
+
+if $(git log -1 --pretty=%B $GIT_COMMIT | head -n 1 | grep -q '^Tidied up the repository$')
+then
+	echo
+	echo "Bring back a source file for v1.0 ..."
+	# we are at v1.0
+	# bring back the source document form last commit
+	#hash_last=$(git rev-parse 'HEAD^1')
+	hash_last=eefcfb44a128b4ed25f4d34d30a1d1d2b3da42ee
+	git checkout $hash_last -- "ASKotec_Process-and-Content.ods"
+fi
+
+echo
+echo -n "Delete generated PDFs ..."
+while read -r pdf_file
+do
+	base_file=$(echo "$pdf_file" | sed -e 's/\.pdf$//')
+	odt_file="${base_file}.odt"
+	ods_file="${base_file}.ods"
+	if [ -f "$odt_file" ] || [ -f "$ods_file" ]
+	then
+		rm -f "$pdf_file"
+	fi
+done < <(find . -type f -path '*.pdf' ! -path './.git*')
+
+if false
+then
+	echo
+	echo ".. actually, you know what ..."
+	echo "Delete all PDFs ..."
+	find . -type f -path '*.pdf' ! -path './.git*' -print0 | xargs -0 rm -f
+fi
+
+if $flatten
+then
+	# NOTE There are several issues with the LibreOffice Flat/XML format (as of August 2019);
+	#      See:
+	#      * https://bugs.documentfoundation.org/show_bug.cgi?id=88298
+	#      * https://ask.libreoffice.org/en/question/148892/attempt-to-preserve-fodt-format-names/
+
+	echo
+	echo "Convert LibreOffice binary (*.od?) to flat/XML (*.fod?) formats ..."
+	while read -r odx_file
+	do
+		flat_ext="f$(echo $odx_file | sed -e 's/.*\.//')"
+		fodx_file="$(echo $odx_file | sed -e 's/\.od/.fod/')"
+		libreoffice --headless --convert-to $flat_ext "$odx_file"
+		rm "$odx_file"
+		# rewrite timestamp
+		date="2019-08-08"
+		time="06:00:00.000000000"
+		sed -i -e 's|\( text:date-value="\)[0-9.-]*\(">00.00.0000</text:date>, <text:time style:data-style-name="N2" text:time-value="\)[0-9:.]*">|\1'$date'\2'$time'">|' "$fodx_file"
+	done < <(find . -type f -path '*.od?' ! -path './.git*' )
+fi
+
+echo
+echo "Rewrite 'media' -> Media.md ..."
+if [ -f media ]
+then
+	rm -f media
+	rm -f Media.md
+	echo "# Media" >> Media.md
+	echo "" >> Media.md
+	echo "Video: [Hardware- and Inovations-Workshop opens in Juba](" >> Media.md
+	echo "https://audioboom.com/posts/6697512-hardware-and-innovations-workshop-opens-in-juba)" >> Media.md
+	echo >> Media.md
+fi
+
+echo
+echo "Remove files with unwanted extensions ..."
+find . -type f -regex "${extensions}" -print0 \
+	| xargs -0 rm -f 2>&1
+

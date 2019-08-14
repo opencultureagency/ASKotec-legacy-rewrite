@@ -1,0 +1,181 @@
+#!/bin/bash
+# Copyright: Public Domain (PD)
+# Cleans up the original, bloated ASKotec repo history.
+
+# immediately exit in case of an error
+set -o errexit
+
+SCRIPT_DIR=$(cd $(dirname "${0}"); pwd)
+WORK_DIR="$(pwd)/workdir"
+ORIG_REPO="ASKotec_orig"
+FLTRD_REPO="ASKotec_fltrd"
+CMPCT_REPO="ASKotec_cmpct"
+extensions=".*\.pdf\|.*\.MOV\|.*\.DS_Store\|.*\.buildconfig"
+legacy_repo_url="https://github.com/opencultureagency/ASKotec-legacy.git"
+assets_repo_url="https://github.com/opencultureagency/ASKotec-assets.git"
+
+DO_FETCH=false
+DO_FILTER=true
+DO_COMPACT=true
+DO_DIST=true
+
+mkdir -p "$WORK_DIR"
+cd "$WORK_DIR"
+
+if $DO_FETCH
+then
+	echo
+	echo "get latest original/legacy repo ..."
+	if [ ! -d "$ORIG_REPO" ]
+	then
+		git clone "$legacy_repo_url" "$ORIG_REPO"
+	else
+		cd "$ORIG_REPO"
+		git pull
+	fi
+
+	cd "$WORK_DIR"
+fi
+
+if $DO_FILTER
+then
+	echo
+	rm -Rf "$FLTRD_REPO"
+	git clone "$ORIG_REPO" "$FLTRD_REPO"
+	cd "$FLTRD_REPO"
+
+	# Make sure we are at the root of a git repository
+	if [ ! -d .git ]; then
+		echo "Error: must run this script from the root of a git repository" 1>&2
+		exit 1
+	fi
+
+	git remote rm origin
+	git remote add origin git@github.com:hoijui/ASKotec.git
+
+	echo "delete all tags ..."
+	git tag -d $(git tag)
+
+	echo "delete all directories, .gitignore and LICENSE* ..."
+	git filter-branch --force  --prune-empty \
+		--index-filter 'git rm --cached --ignore-unmatch \*/\* .gitignore LICENSE*' \
+		HEAD
+
+	echo
+	echo "cleaning up file-names ..."
+	git filter-branch --force --prune-empty \
+		--tree-filter "$SCRIPT_DIR/filter-askotec-commit" \
+		HEAD
+
+	echo
+	echo "Beef-up the first commit ..."
+	commit_initial=$(git log --oneline --grep='^Initial commit$' master | awk -e '{ print $1 }')
+	# checkout the root commit
+	git checkout $commit_initial
+	# make the changes
+	cp "$SCRIPT_DIR/_gitignore" ./.gitignore
+	cp "$SCRIPT_DIR/dist.sh" ./
+	cp "$SCRIPT_DIR/LICENSE.md" ./
+	git add .gitignore dist.sh LICENSE.md
+	git submodule add "$assets_repo_url" assets
+	# amend the commit
+	git commit --amend --no-edit
+	# rebase all the other commits in master onto the amended root
+	git rebase --onto HEAD $commit_initial master
+
+	echo
+	echo "Overwriting the README for v1.0 & v1.5 ..."
+	commit_1_0=$(git log --oneline --grep='^Tidied up the repository$' master | awk -e '{ print $1 }')
+	commit_1_0_plus_1=$(git log --oneline --grep='^Tidied up the repository for V.1.5$' master | awk -e '{ print $1 }')
+	# checkout the root commit
+	git checkout $commit_1_0
+	# make the changes
+	cp "$SCRIPT_DIR/_README_1_0.md" ./README.md
+	git add README.md
+	# amend the commit
+	git commit --amend --no-edit
+	# ... and the next commit
+	git cherry-pick $commit_1_0_plus_1 || true
+	cp "$SCRIPT_DIR/_README_1_5.md" ./README.md
+	git add README.md
+	git commit -m 'Tidied up the repository for V.1.5'
+	# rebase all the other commits in master onto the amended root
+	git rebase --onto HEAD $commit_1_0_plus_1 master
+
+	echo
+	echo "Setting version tags ..."
+	commit_0_1=$(git log --oneline --grep='^Initial commit$' master | awk -e '{ print $1 }')
+	commit_1_0=$(git log --oneline --grep='^Tidied up the repository$' master | awk -e '{ print $1 }')
+	git tag -m '#ASKotec release version 0.1' -a 'askotec-0.1' $commit_0_1
+	git tag -m '#ASKotec release version 1.0' -a 'askotec-1.0' $commit_1_0
+
+if false
+then
+	echo
+	echo "Setting up Git-LFS + trackers ..."
+	git lfs install
+	git lfs track "*.pdf"
+	git lfs track "*.jpg"
+	git lfs track "*.png"
+	git lfs track "*.mov"
+
+	git config lfs.url = "https://github.com/hoijui/ASKotec.git/info/lfs"
+
+	echo
+	echo "Migrating to Git-LFS ..."
+	git lfs migrate import --everything
+
+	# Expire old stuff
+	rm -rf .git/refs/original/
+	git reflog expire --expire=now --all
+fi
+
+#	git-compact
+
+	cd "$WORK_DIR"
+fi
+
+if $DO_COMPACT
+then
+	echo
+	rm -Rf "$CMPCT_REPO"
+	echo "compacting the repo ..."
+	git clone "$FLTRD_REPO" "$CMPCT_REPO"
+#	cp -r "$FLTRD_REPO" "$CMPCT_REPO"
+	cd "$CMPCT_REPO"
+
+#	git remote rm origin
+#	git remote add origin git@github.com:hoijui/ASKotec.git
+
+	git-compact
+
+	cd "$WORK_DIR"
+fi
+
+if $DO_DIST
+then
+	echo
+	echo "creating distributions ..."
+	cd "$CMPCT_REPO"
+	git checkout 'askotec-0.1'
+	./dist.sh
+	git checkout 'askotec-1.0'
+	./dist.sh
+	git checkout 'master'
+	./dist.sh
+
+	echo "Created distribution archives:"
+	for arch in dist/*.zip
+	do
+		echo "* '$arch'"
+	done
+
+	cd "$WORK_DIR"
+fi
+
+echo
+
+git-repo-report "$ORIG_REPO"
+git-repo-report "$FLTRD_REPO"
+git-repo-report "$CMPCT_REPO"
+
