@@ -7,17 +7,20 @@ set -o errexit
 
 SCRIPT_DIR=$(cd $(dirname "${0}"); pwd)
 WORK_DIR="$(pwd)/workdir"
-ORIG_REPO="ASKotec_orig"
-FLTRD_REPO="ASKotec_fltrd"
-CMPCT_REPO="ASKotec_cmpct"
-extensions=".*\.pdf\|.*\.MOV\|.*\.DS_Store\|.*\.buildconfig"
-legacy_repo_url="https://github.com/opencultureagency/ASKotec-legacy.git"
-assets_repo_url="https://github.com/opencultureagency/ASKotec-assets.git"
 
+# Whether to convert LibreOffice binary files to text-based ones
+flatten=$([ "$1" = "--flatten" ] && echo 'true' || echo 'false')
 DO_FETCH=false
 DO_FILTER=true
 DO_COMPACT=true
 DO_DIST=true
+
+ORIG_REPO="ASKotec_orig"
+FLTRD_REPO="ASKotec_fltrd"
+CMPCT_REPO="ASKotec_cmpct_$($flatten && echo 'flt' || echo 'bin')"
+extensions=".*\.pdf\|.*\.MOV\|.*\.DS_Store\|.*\.buildconfig"
+legacy_repo_url="https://github.com/opencultureagency/ASKotec-legacy.git"
+assets_repo_url="https://github.com/opencultureagency/ASKotec-assets.git"
 
 mkdir -p "$WORK_DIR"
 cd "$WORK_DIR"
@@ -64,7 +67,7 @@ then
 	echo
 	echo "cleaning up file-names ..."
 	git filter-branch --force --prune-empty \
-		--tree-filter "$SCRIPT_DIR/filter-askotec-commit" \
+		--tree-filter "$SCRIPT_DIR/filter-askotec-commit $flatten" \
 		HEAD
 
 	echo
@@ -157,6 +160,16 @@ then
 	echo
 	echo "creating distributions ..."
 	cd "$CMPCT_REPO"
+
+	git remote rm origin
+	if $flatten
+	then
+		repo_suffix="-flat"
+	else
+		repo_suffix=""
+	fi
+	git remote add origin "git@github.com:hoijui/ASKotec$repo_suffix.git"
+
 	git checkout 'ASKotek-0.1'
 	./dist.sh
 	git checkout 'ASKotec-1.0'

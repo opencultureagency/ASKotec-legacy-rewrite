@@ -8,8 +8,8 @@ set -o errexit
 SCRIPT_DIR=$(cd $(dirname "${0}"); pwd)
 #extensions=".*\.pdf\|.*\.MOV\|.*\.DS_Store\|.*\.buildconfig\|.*\.xml"
 extensions=".*\.MOV\|.*\.DS_Store\|.*\.buildconfig\|.*\.xml"
-# Whether to convert LibreOffice binary files to text-based ones.
-flatten=true
+# Whether to convert LibreOffice binary files to text-based ones
+flatten=$1
 
 echo
 echo "###################################################"
