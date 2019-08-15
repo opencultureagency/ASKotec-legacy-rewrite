@@ -1,8 +1,10 @@
 # These should be replaced with Markdown files,
-# or at least LibreOffice flat (XML) files (*.fodt)
+# or at least LibreOffice flat (XML) files (*.fodt, *.fods)
 *.docx
 *.odt
-*.ods
+# NOTE We keep Calc files as binaries, because the flat format
+#      has problems with formulas for formatting (as of August 2019)
+#*.ods
 
 # These should rather be added as editable/source files,
 # for example Markdown
