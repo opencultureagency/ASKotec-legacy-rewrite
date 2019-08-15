@@ -22,12 +22,13 @@ detox -r *
 
 echo
 echo -n "Delete all directories ..."
-find . -maxdepth 1 -type d ! -path '.' ! -path './.git*' -print0 | xargs -0 rm -Rf
+find . -maxdepth 1 -type d ! -path '.' ! -path './.git*' -print0 \
+	| xargs --no-run-if-empty -0 rm -Rf
 
 echo
 echo -n "Convert MS Word files (*.docx) to LibreOffice Writer (*.odt) ..."
 find . -type f -path '*.docx' ! -path './.git*' -print0 \
-	| xargs -0 libreoffice --headless --convert-to odt
+	| xargs --no-run-if-empty -0 libreoffice --headless --convert-to odt
 
 echo
 echo "Remove version info from file-names ..."
@@ -94,7 +95,8 @@ then
 	echo
 	echo ".. actually, you know what ..."
 	echo "Delete all PDFs ..."
-	find . -type f -path '*.pdf' ! -path './.git*' -print0 | xargs -0 rm -f
+	find . -type f -path '*.pdf' ! -path './.git*' -print0 \
+		| xargs --no-run-if-empty -0 rm -f
 fi
 
 if $flatten
@@ -142,5 +144,5 @@ fi
 echo
 echo "Remove files with unwanted extensions ..."
 find . -type f -regex "${extensions}" -print0 \
-	| xargs -0 rm -f 2>&1
+	| xargs --no-run-if-empty -0 rm -f 2>&1
 
