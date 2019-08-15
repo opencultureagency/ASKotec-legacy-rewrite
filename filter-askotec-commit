@@ -125,7 +125,7 @@ then
 		# replace list IDs
 		sed -i -e 's|\(<text:list xml:id="list\)[0-9]*\(" text:style-name="L\)\([0-9]*\)\(">\)|\1\3\2\3\4|' "$fodx_file"
 		echo " done."
-	done < <(find . -type f -path '*.od?' ! -path './.git*' )
+	done < <(find . -type f -path '*.odt' ! -path './.git*' )
 fi
 
 echo
